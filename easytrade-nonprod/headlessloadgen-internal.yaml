@@ -1,0 +1,72 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: external-ip-resolver
+  namespace: easytrade-nonprod
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ext-ip-res-role
+  namespace: easytrade-nonprod
+rules:
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["get"]
+  - apiGroups: [""]
+    resources: ["configmaps"]
+    verbs: ["create", "get", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ext-ip-res-binding
+  namespace: easytrade-nonprod
+subjects:
+  - kind: ServiceAccount
+    name: external-ip-resolver
+roleRef:
+  kind: Role
+  name: ext-ip-res-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: headlessloadgen
+  name: headlessloadgen
+  namespace: easytrade-nonprod
+spec:
+  selector:
+    matchLabels:
+      app: headlessloadgen
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: headlessloadgen
+    spec:
+      containers:
+      - name: headlessloadgen
+        image: gcr.io/dynatrace-demoability/headlessloadgen:848c2ab
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 250m
+            memory: "500Mi"
+          limits:
+            memory: "500Mi"
+        env:
+        - name: EASY_TRADE_ADDRESS
+          value: "easytrade-nonprod-frontend-reverseproxy"
+        - name: EASY_TRADE_DOMAIN
+          value: "easytrade-nonprod-frontend-reverseproxy"
+        - name: EASY_TRADE_PORT
+          value: "80"
+        - name: NODE_LOG_LEVEL
+          value: "error"

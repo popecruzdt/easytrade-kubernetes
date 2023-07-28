@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pluginservice
+  namespace: easytrade-nonprod
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pluginservice
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: pluginservice
+        app.kubernetes.io/version: ce61dca
+        app.kubernetes.io/part-of: easytrade
+        dynatrace-release-stage: non-prod
+    spec:
+      containers:
+      - name: pluginservice
+        image: gcr.io/dynatrace-demoability/easytrade/pluginservice:ce61dca
+        ports:
+        - containerPort: 8080
+        env:
+        - name: DT_RELEASE_PRODUCT
+          value: easytrade
+        - name: DT_RELEASE_STAGE
+          value: nonprod
+        - name: DT_RELEASE_BUILD_VERSION
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.labels['app.kubernetes.io/version']
+        - name: DT_RELEASE_VERSION
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.labels['app.kubernetes.io/version']
+        - name: OFFER_SERVICE__PORT
+          value: '8080'
+        - name: OFFER_SERVICE__DOMAIN
+          value: offerservice
+        - name: MANAGER__DOMAIN
+          value: manager
+        - name: MANAGER__PORT
+          value: '80'
+        resources:
+          requests:
+            cpu: 100m
+            memory: 50Mi
+          limits:
+            cpu: 1000m
+            memory: 50Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pluginservice
+  namespace: easytrade-nonprod
+spec:
+  type: ClusterIP
+  selector:
+    app: pluginservice
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080

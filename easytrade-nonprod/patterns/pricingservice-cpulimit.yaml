@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pricingservice
+  namespace: easytrade-nonprod
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pricingservice
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: pricingservice
+        app.kubernetes.io/version: ce61dca
+        app.kubernetes.io/part-of: easytrade
+        dynatrace-release-stage: non-prod
+    spec:
+      containers:
+      - name: pricingservice
+        image: gcr.io/dynatrace-demoability/easytrade/pricingservice:ce61dca
+        ports:
+        - containerPort: 80
+        env:
+        - name: DT_RELEASE_PRODUCT
+          value: easytrade
+        - name: DT_RELEASE_STAGE
+          value: nonprod
+        - name: DT_RELEASE_BUILD_VERSION
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.labels['app.kubernetes.io/version']
+        - name: DT_RELEASE_VERSION
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.labels['app.kubernetes.io/version']
+        - name: MANAGER_HOSTANDPORT
+          value: "manager:80"
+        - name: RABBITMQ_HOST
+          value: "rabbitmq"
+        - name: RABBITMQ_USER
+          value: "userxxx"
+        - name: RABBITMQ_PASSWORD
+          value: "passxxx"
+        resources:
+          requests:
+            cpu: 50m
+            memory: 350Mi
+          limits:
+            cpu: 50m
+            memory: 500Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pricingservice
+  namespace: easytrade-nonprod
+spec:
+  type: ClusterIP
+  selector:
+    app: pricingservice
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80

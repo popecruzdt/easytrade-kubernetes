@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: contentcreator
+  namespace: easytrade-nonprod
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: contentcreator
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: contentcreator
+        app.kubernetes.io/version: ce61dca
+        app.kubernetes.io/part-of: easytrade
+        dynatrace-release-stage: non-prod
+    spec:
+      containers:
+      - name: contentcreator
+        image: gcr.io/dynatrace-demoability/easytrade/contentcreator:ce61dca
+        env:
+        - name: DT_RELEASE_PRODUCT
+          value: easytrade
+        - name: DT_RELEASE_STAGE
+          value: nonprod
+        - name: DT_RELEASE_BUILD_VERSION
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.labels['app.kubernetes.io/version']
+        - name: DT_RELEASE_VERSION
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.labels['app.kubernetes.io/version']
+        - name: MSSQL_CONNECTIONSTRING
+          value: "jdbc:sqlserver://easytrade-nonprod-db:1433;database=TradeManagement;user=sa;password=yourStrong(!)Password;encrypt=false;trustServerCertificate=false;loginTimeout=30;"
+        resources:
+          requests:
+            cpu: 100m
+            memory: 200Mi
+          limits:
+            cpu: 1000m
+            memory: 300Mi

@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loginservice
+  namespace: easytrade-nonprod
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: loginservice
+  strategy:
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: loginservice
+        app.kubernetes.io/version: ce61dca
+        app.kubernetes.io/part-of: easytrade
+        dynatrace-release-stage: non-prod
+    spec:
+      containers:
+      - name: loginservice
+        image: gcr.io/dynatrace-demoability/easytrade/loginservice:ce61dca
+        ports:
+        - containerPort: 80
+        env:
+        - name: DT_RELEASE_PRODUCT
+          value: easytrade
+        - name: DT_RELEASE_STAGE
+          value: nonprod
+        - name: DT_RELEASE_BUILD_VERSION
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.labels['app.kubernetes.io/version']
+        - name: DT_RELEASE_VERSION
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.labels['app.kubernetes.io/version']
+        - name: MSSQL_CONNECTIONSTRING
+          value: "Data Source=easytrade-nonprod-db;Initial Catalog=TradeManagement;Persist Security Info=True;User ID=sa;Password=yourStrong(!)Password"
+        resources:
+          requests:
+            cpu: 100m
+            memory: 350Mi
+          limits:
+            cpu: 1000m
+            memory: 400Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: loginservice
+  namespace: easytrade-nonprod
+spec:
+  type: ClusterIP
+  selector:
+    app: loginservice
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
